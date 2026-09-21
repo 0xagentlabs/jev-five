@@ -1,6 +1,7 @@
 "use client";
 
-import { Bot, BrainCircuit, Eye, EyeOff, ExternalLink, KeyRound, RotateCcw, Swords, UserRound, X } from "lucide-react";
+import { Bot, BrainCircuit, Eye, EyeOff, ExternalLink, KeyRound, Radio, RotateCcw, Swords, UserRound, X } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Board, createBoard, getWinner, isBoardFull, otherStone, placeStone, Position, Stone, toLabel } from "@/lib/game";
 
@@ -148,6 +149,7 @@ export default function Home() {
         <nav className="mode-switch" aria-label="对局模式">
           <button aria-pressed={mode === "human"} className={mode === "human" ? "active" : ""} onClick={() => reset("human", humanStone)}><UserRound size={18} aria-hidden="true" /> <span>人类 vs Jev</span></button>
           <button aria-pressed={mode === "duel"} className={mode === "duel" ? "active" : ""} onClick={() => reset("duel", humanStone)}><Swords size={18} aria-hidden="true" /> <span>Jev vs Jev</span></button>
+          <Link href="/fighting"><Radio size={18} aria-hidden="true" /> <span>Jev Fighting</span></Link>
         </nav>
         <button className={`api-pill ${configured ? "ready" : "missing"}`} onClick={() => setShowKeyPrompt(true)}><span />{configured === null ? "检测配置" : configured ? "Jev 已连接" : "配置 API Key"}</button>
       </header>
