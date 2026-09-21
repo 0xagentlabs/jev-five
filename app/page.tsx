@@ -33,17 +33,17 @@ export default function Home() {
   const gameOver = Boolean(winner || draw);
 
   useEffect(() => {
-    const savedKey = window.sessionStorage.getItem("jev_typesafe_api_key") ?? "";
-    setJevKey(savedKey);
-    setKeyDraft(savedKey);
-    fetch("/api/config", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((data) => {
-        const isConfigured = Boolean(data.configured || savedKey);
-        setConfigured(isConfigured);
-        if (!isConfigured) setShowKeyPrompt(true);
-      })
-      .catch(() => setConfigured(Boolean(savedKey)));
+    try {
+      const savedKey = window.localStorage.getItem("jev_typesafe_api_key") ?? "";
+      setJevKey(savedKey);
+      setKeyDraft(savedKey);
+      setConfigured(Boolean(savedKey));
+      setShowKeyPrompt(!savedKey);
+    } catch {
+      setConfigured(false);
+      setShowKeyPrompt(true);
+      setKeyError("浏览器已禁用本地存储，请允许后再保存 API Key。");
+    }
   }, []);
 
   const saveKey = () => {
@@ -56,7 +56,12 @@ export default function Home() {
       setKeyError("API Key 长度异常，请检查后重试。");
       return;
     }
-    window.sessionStorage.setItem("jev_typesafe_api_key", value);
+    try {
+      window.localStorage.setItem("jev_typesafe_api_key", value);
+    } catch {
+      setKeyError("无法写入本地存储，请检查浏览器隐私设置。");
+      return;
+    }
     setJevKey(value);
     setConfigured(true);
     setKeyError("");
@@ -64,7 +69,7 @@ export default function Home() {
   };
 
   const clearKey = () => {
-    window.sessionStorage.removeItem("jev_typesafe_api_key");
+    window.localStorage.removeItem("jev_typesafe_api_key");
     setJevKey("");
     setKeyDraft("");
     setConfigured(false);
@@ -187,7 +192,7 @@ export default function Home() {
         </aside>
       </section>
 
-      {showKeyPrompt && <div className="modal-backdrop" role="presentation"><section className="modal" role="dialog" aria-modal="true" aria-labelledby="key-title"><button className="modal-close" onClick={() => setShowKeyPrompt(false)} aria-label="关闭提示"><X size={19} /></button><span className="modal-icon"><KeyRound /></span><small>BRING YOUR OWN KEY</small><h2 id="key-title">配置 Jev API Key</h2><p>填入 TypeSafe 官方密钥即可开始对局。密钥仅保存在当前浏览器会话中，关闭标签页后自动清除。</p><div className="key-field"><label htmlFor="jev-api-key">TypeSafe API Key</label><div><input id="jev-api-key" type={showKey ? "text" : "password"} value={keyDraft} onChange={(event) => { setKeyDraft(event.target.value); setKeyError(""); }} onKeyDown={(event) => { if (event.key === "Enter") saveKey(); }} placeholder="粘贴你的 API Key" autoComplete="off" spellCheck={false} aria-describedby="key-help key-error" autoFocus /><button type="button" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? "隐藏 API Key" : "显示 API Key"}>{showKey ? <EyeOff size={18} /> : <Eye size={18} />}</button></div><small id="key-help">通过 HTTPS 发送给本站服务端代理，不会写入数据库或构建产物。</small>{keyError && <strong id="key-error" role="alert">{keyError}</strong>}</div><button className="modal-cta key-submit" onClick={saveKey}>保存并开始</button>{jevKey && <button className="text-button danger-text" onClick={clearKey}>清除当前会话密钥</button>}<a className="text-link" href="https://console.typesafe.ai/settings/keys" target="_blank" rel="noreferrer">获取官方 API Key <ExternalLink size={14} /></a><button className="text-button" onClick={() => setShowKeyPrompt(false)}>先看看棋盘</button></section></div>}
+      {showKeyPrompt && <div className="modal-backdrop" role="presentation"><section className="modal" role="dialog" aria-modal="true" aria-labelledby="key-title"><button className="modal-close" onClick={() => setShowKeyPrompt(false)} aria-label="关闭提示"><X size={19} /></button><span className="modal-icon"><KeyRound /></span><small>BRING YOUR OWN KEY</small><h2 id="key-title">配置 Jev API Key</h2><p>填入 TypeSafe 官方密钥即可开始对局。密钥仅保存在当前浏览器的本地存储中，下次访问会自动读取。</p><div className="key-field"><label htmlFor="jev-api-key">TypeSafe API Key</label><div><input id="jev-api-key" type={showKey ? "text" : "password"} value={keyDraft} onChange={(event) => { setKeyDraft(event.target.value); setKeyError(""); }} onKeyDown={(event) => { if (event.key === "Enter") saveKey(); }} placeholder="粘贴你的 API Key" autoComplete="off" spellCheck={false} aria-describedby="key-help key-error" autoFocus /><button type="button" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? "隐藏 API Key" : "显示 API Key"}>{showKey ? <EyeOff size={18} /> : <Eye size={18} />}</button></div><small id="key-help">通过 HTTPS 发送给本站服务端代理，不会写入数据库或构建产物。</small>{keyError && <strong id="key-error" role="alert">{keyError}</strong>}</div><button className="modal-cta key-submit" onClick={saveKey}>保存并开始</button>{jevKey && <button className="text-button danger-text" onClick={clearKey}>清除本地密钥</button>}<a className="text-link" href="https://console.typesafe.ai/keys" target="_blank" rel="noreferrer">获取官方 API Key <ExternalLink size={14} /></a><button className="text-button" onClick={() => setShowKeyPrompt(false)}>先看看棋盘</button></section></div>}
     </main>
   );
 }

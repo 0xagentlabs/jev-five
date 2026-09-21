@@ -10,7 +10,7 @@ Jev Five 是一个 15×15 五子棋体验站。人机模式允许玩家选择黑
 - `app/api/move/route.ts`：仅服务端调用官方 TypeSafe SDK
 - `lib/game.ts`：棋盘、胜负、坐标和合法性规则
 - `app/page.tsx`：两种对局状态机与界面
-- 前端自带密钥：保存在当前浏览器 `sessionStorage`，请求时经 HTTPS 发送给服务端代理
+- 前端自带密钥：优先从当前浏览器 `localStorage` 读取，没有时弹窗获取，请求时经 HTTPS 发送给服务端代理
 - `TYPESAFE_API_KEY`：可选的服务端默认密钥
 
 ## 启动与配置
@@ -21,7 +21,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-从 `https://console.typesafe.ai/settings/keys` 获取密钥并写入 `.env.local`：
+从 `https://console.typesafe.ai/keys` 获取密钥并写入 `.env.local`：
 
 ```text
 TYPESAFE_API_KEY=你的密钥
@@ -57,6 +57,6 @@ pnpm build
 - GitHub：`https://github.com/0xagentlabs/jev-five`
 - Vercel 生产环境：`https://jev-five-ten.vercel.app`
 - Jev 官方站点：`https://typesafe.ai`
-- TypeSafe Console：`https://console.typesafe.ai/settings/keys`
+- TypeSafe Console：`https://console.typesafe.ai/keys`
 
 Vercel 项目已连接上述 GitHub 仓库的 `main` 分支。当前生产环境不内置共享密钥，访问者可在前端填入自己的 TypeSafe API Key。
