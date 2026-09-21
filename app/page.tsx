@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, BrainCircuit, Eye, EyeOff, ExternalLink, KeyRound, RotateCcw, Sparkles, Swords, UserRound, X } from "lucide-react";
+import { Bot, BrainCircuit, Eye, EyeOff, ExternalLink, KeyRound, RotateCcw, Swords, UserRound, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Board, createBoard, getWinner, isBoardFull, otherStone, placeStone, Position, Stone, toLabel } from "@/lib/game";
 
@@ -143,12 +143,6 @@ export default function Home() {
         <button className={`api-pill ${configured ? "ready" : "missing"}`} onClick={() => setShowKeyPrompt(true)}><span />{configured === null ? "检测配置" : configured ? "Jev 已连接" : "配置 API Key"}</button>
       </header>
 
-      <section className="hero">
-        <div className="eyebrow"><Sparkles size={15} /> TYPE-SAFE DECISIONS, EVERY MOVE</div>
-        <h1>不是“猜”下一步，<br /><em>而是选择下一步。</em></h1>
-        <p>把 15×15 棋局变成 225 个结构化选项，让 Jev 在毫秒级决策中进攻、防守、对弈。</p>
-      </section>
-
       <section className="mode-switch" aria-label="对局模式">
         <button className={mode === "human" ? "active" : ""} onClick={() => reset("human", humanStone)}><UserRound size={18} /> 人类 vs Jev</button>
         <button className={mode === "duel" ? "active" : ""} onClick={() => reset("duel", humanStone)}><Swords size={18} /> Jev vs Jev</button>
@@ -193,8 +187,6 @@ export default function Home() {
           <div className="primitive"><span>DECISION PIPELINE</span><code>threat search → choice()</code><p>识别跳四、眠四、四三杀、双三与活二，再经三层对手回应搜索，最后由 Jev 决策。</p></div>
         </aside>
       </section>
-
-      <footer><span>Built with the official TypeSafe SDK</span><a href="https://typesafe.ai" target="_blank" rel="noreferrer">了解 Jev <ExternalLink size={14} /></a></footer>
 
       {showKeyPrompt && <div className="modal-backdrop" role="presentation"><section className="modal" role="dialog" aria-modal="true" aria-labelledby="key-title"><button className="modal-close" onClick={() => setShowKeyPrompt(false)} aria-label="关闭提示"><X size={19} /></button><span className="modal-icon"><KeyRound /></span><small>BRING YOUR OWN KEY</small><h2 id="key-title">配置 Jev API Key</h2><p>填入 TypeSafe 官方密钥即可开始对局。密钥仅保存在当前浏览器会话中，关闭标签页后自动清除。</p><div className="key-field"><label htmlFor="jev-api-key">TypeSafe API Key</label><div><input id="jev-api-key" type={showKey ? "text" : "password"} value={keyDraft} onChange={(event) => { setKeyDraft(event.target.value); setKeyError(""); }} onKeyDown={(event) => { if (event.key === "Enter") saveKey(); }} placeholder="粘贴你的 API Key" autoComplete="off" spellCheck={false} aria-describedby="key-help key-error" autoFocus /><button type="button" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? "隐藏 API Key" : "显示 API Key"}>{showKey ? <EyeOff size={18} /> : <Eye size={18} />}</button></div><small id="key-help">通过 HTTPS 发送给本站服务端代理，不会写入数据库或构建产物。</small>{keyError && <strong id="key-error" role="alert">{keyError}</strong>}</div><button className="modal-cta key-submit" onClick={saveKey}>保存并开始</button>{jevKey && <button className="text-button danger-text" onClick={clearKey}>清除当前会话密钥</button>}<a className="text-link" href="https://console.typesafe.ai/settings/keys" target="_blank" rel="noreferrer">获取官方 API Key <ExternalLink size={14} /></a><button className="text-button" onClick={() => setShowKeyPrompt(false)}>先看看棋盘</button></section></div>}
     </main>
