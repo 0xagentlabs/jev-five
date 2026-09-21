@@ -1,6 +1,7 @@
 import { choice, TypeSafeClient } from "@typesafe-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { BOARD_SIZE, Board, fromLabel, isLegal, legalMoves, serializeBoard, Stone, toLabel } from "@/lib/game";
+import { BOARD_SIZE, Board, fromLabel, isLegal, legalMoves, serializeBoard, Stone } from "@/lib/game";
+import { rankCandidates } from "@/lib/engine";
 
 type MoveRequest = { board?: Board; stone?: Stone; persona?: "attack" | "defense" };
 
@@ -31,10 +32,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "棋盘或执子参数无效。" }, { status: 400 });
   }
 
-  const moves = legalMoves(body.board);
-  if (!moves.length) return NextResponse.json({ message: "棋盘已满。" }, { status: 409 });
+  if (!legalMoves(body.board).length) return NextResponse.json({ message: "棋盘已满。" }, { status: 409 });
 
-  const criteria = Object.fromEntries(moves.map((move) => [toLabel(move), null]));
+  const candidates = rankCandidates(body.board, body.stone);
+  if (candidates.length === 1) {
+    const candidate = candidates[0];
+    return NextResponse.json({
+      move: { row: candidate.row, col: candidate.col },
+      label: candidate.label,
+      confidence: 1,
+      probabilities: [{ label: candidate.label, probability: 1 }],
+      latencyMs: 0,
+      model: "tactical-core + jev-latest",
+      tactic: candidate.reason,
+    });
+  }
+  const criteria = Object.fromEntries(candidates.map((move) => [move.label, `${move.reason}；启发式评分 ${Math.round(move.score)}`]));
   const persona = body.persona === "defense"
     ? "稳健型：优先阻止对手成五，其次建立连续棋形。"
     : "进攻型：优先自己成五，同时必须阻止对手下一手成五。";
@@ -50,9 +63,10 @@ export async function POST(request: NextRequest) {
         currentPlayer: body.stone,
         strategy: persona,
         occupied: serializeBoard(body.board),
+        tacticalCandidates: candidates.map((move) => ({ coordinate: move.label, score: Math.round(move.score), analysis: move.reason })),
       },
       questions: {
-        move: choice("Choose exactly one legal coordinate for the strongest Gomoku move. Check immediate wins first, then block any opponent immediate win, then prefer forks and connected shapes.", criteria),
+        move: choice("Choose the strongest move from the tactically pre-ranked candidates. Prefer forced wins and blocks, then double threats (double-four, four-three, double-open-three), then moves that minimize the opponent's strongest reply. Use the supplied shape analysis and scores; do not choose by coordinate aesthetics.", criteria),
       },
     });
 
@@ -71,6 +85,7 @@ export async function POST(request: NextRequest) {
       probabilities,
       latencyMs: Date.now() - startedAt,
       model: "jev-latest",
+      tactic: candidates.find((candidate) => candidate.label === answer.choice)?.reason,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Jev 请求失败";

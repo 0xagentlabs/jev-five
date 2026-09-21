@@ -38,7 +38,9 @@ TYPESAFE_API_KEY=你的密钥
 
 ## API 约定
 
-`POST /api/move` 接收 `board`（15×15 的 `black | white | null` 数组）、`stone` 与策略。浏览器自带密钥通过 `X-TypeSafe-API-Key` 请求头传输；若没有该请求头，服务端才读取 `TYPESAFE_API_KEY`。服务端使用 `jev-latest` 和 `choice()`，把 A1–O15 范围内的所有合法空位作为 criteria。返回落点、置信度、前五候选、耗时与模型名。服务端会校验请求棋盘和 Jev 返回的落点，非法结果不会写入棋盘。
+`POST /api/move` 接收 `board`（15×15 的 `black | white | null` 数组）、`stone` 与策略。浏览器自带密钥通过 `X-TypeSafe-API-Key` 请求头传输；若没有该请求头，服务端才读取 `TYPESAFE_API_KEY`。
+
+混合棋力管线会先直接锁定唯一必胜或必防点；普通局面计算连续棋形、开放端、活四、双四、双活三、中心控制与对手下一层反击，把全盘压缩成最多 14 个带分析和评分的候选，再交给 `jev-latest` 的 `choice()` 做最终选择。返回落点、置信度、前五候选、耗时、模型名与战术标签。服务端会再次校验坐标合法性，非法结果不会写入棋盘。
 
 ## 测试与构建
 

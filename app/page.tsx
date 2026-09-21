@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Board, createBoard, getWinner, isBoardFull, otherStone, placeStone, Position, Stone, toLabel } from "@/lib/game";
 
 type Mode = "human" | "duel";
-type JevResult = { label: string; confidence?: number; probabilities: { label: string; probability: number }[]; latencyMs: number; model: string; move: Position };
+type JevResult = { label: string; confidence?: number; probabilities: { label: string; probability: number }[]; latencyMs: number; model: string; move: Position; tactic?: string };
 type MoveLog = { stone: Stone; label: string; actor: string; confidence?: number; latencyMs?: number };
 
 const stoneName = (stone: Stone) => stone === "black" ? "黑方" : "白方";
@@ -183,14 +183,14 @@ export default function Home() {
 
         <aside className="panel insight-panel">
           <div className="panel-heading"><span>Jev 决策台</span><span className="live-dot">LIVE</span></div>
-          <div className="model-card"><small>MODEL</small><strong>jev-latest</strong><span>Official TypeSafe API</span></div>
+          <div className="model-card"><small>HYBRID ENGINE</small><strong>Tactical Core × Jev</strong><span>Two-ply screening + jev-latest</span></div>
           {result ? <>
-            <div className="decision-hero"><small>最新选择</small><strong>{result.label}</strong><span>{result.latencyMs} ms</span></div>
+            <div className="decision-hero"><small>最新选择</small><strong>{result.label}</strong><span>{result.latencyMs} ms</span>{result.tactic && <p>{result.tactic}</p>}</div>
             <div className="confidence"><div><span>置信度</span><b>{result.confidence == null ? "—" : `${Math.round(result.confidence * 100)}%`}</b></div><div className="bar"><i style={{ width: `${(result.confidence ?? 0) * 100}%` }} /></div></div>
             <div className="candidates"><div className="section-label">TOP CHOICES</div>{result.probabilities.map((item) => <div key={item.label}><span>{item.label}</span><i><b style={{ width: `${Math.max(item.probability * 100, 2)}%` }} /></i><small>{Math.round(item.probability * 100)}%</small></div>)}</div>
           </> : <div className="insight-empty"><BrainCircuit size={30} /><strong>等待 Jev 决策</strong><p>每次响应只返回预定义坐标，不生成自由文本。</p></div>}
           {error && <div className="error-box" role="alert">{error}<button onClick={() => askJev(board, turn)}>重试</button></div>}
-          <div className="primitive"><span>PRIMITIVE</span><code>choice()</code><p>所有合法空位作为类型安全选项；应用只接受棋盘内的有效坐标。</p></div>
+          <div className="primitive"><span>DECISION PIPELINE</span><code>tactics → choice()</code><p>先锁定必胜与必防，再评估双四、双三和对手反击，最后由 Jev 在高质量候选中决策。</p></div>
         </aside>
       </section>
 
