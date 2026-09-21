@@ -140,13 +140,12 @@ export default function Home() {
     <main>
       <header className="topbar">
         <a className="brand" href="#game" aria-label="Jev Five 首页"><span className="brand-mark"><BrainCircuit size={20} /></span><span>Jev Five</span><small>System One Arena</small></a>
+        <nav className="mode-switch" aria-label="对局模式">
+          <button aria-pressed={mode === "human"} className={mode === "human" ? "active" : ""} onClick={() => reset("human", humanStone)}><UserRound size={18} aria-hidden="true" /> <span>人类 vs Jev</span></button>
+          <button aria-pressed={mode === "duel"} className={mode === "duel" ? "active" : ""} onClick={() => reset("duel", humanStone)}><Swords size={18} aria-hidden="true" /> <span>Jev vs Jev</span></button>
+        </nav>
         <button className={`api-pill ${configured ? "ready" : "missing"}`} onClick={() => setShowKeyPrompt(true)}><span />{configured === null ? "检测配置" : configured ? "Jev 已连接" : "配置 API Key"}</button>
       </header>
-
-      <section className="mode-switch" aria-label="对局模式">
-        <button className={mode === "human" ? "active" : ""} onClick={() => reset("human", humanStone)}><UserRound size={18} /> 人类 vs Jev</button>
-        <button className={mode === "duel" ? "active" : ""} onClick={() => reset("duel", humanStone)}><Swords size={18} /> Jev vs Jev</button>
-      </section>
 
       <section id="game" className="game-shell">
         <aside className="panel left-panel">
