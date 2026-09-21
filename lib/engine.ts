@@ -34,15 +34,58 @@ function shapeScore(length: number, openEnds: number) {
   return openEnds * 8;
 }
 
+type PatternCounts = {
+  jumpFour: number;
+  openThree: number;
+  jumpThree: number;
+  sleepThree: number;
+  openTwo: number;
+};
+
+function directionalString(board: Board, position: Position, stone: Stone, dr: number, dc: number) {
+  let value = "";
+  for (let offset = -5; offset <= 5; offset += 1) {
+    const cell = board[position.row + dr * offset]?.[position.col + dc * offset];
+    value += cell === stone ? "X" : cell === null ? "." : "O";
+  }
+  return value;
+}
+
+function countPatterns(value: string, patterns: string[]) {
+  return patterns.reduce((total, pattern) => {
+    let count = 0;
+    for (let index = 0; index <= value.length - pattern.length; index += 1) {
+      if (value.slice(index, index + pattern.length) === pattern) count += 1;
+    }
+    return total + count;
+  }, 0);
+}
+
+function patternCounts(board: Board, position: Position, stone: Stone): PatternCounts {
+  const total: PatternCounts = { jumpFour: 0, openThree: 0, jumpThree: 0, sleepThree: 0, openTwo: 0 };
+  for (const [dr, dc] of DIRECTIONS) {
+    const line = directionalString(board, position, stone, dr, dc);
+    total.jumpFour += countPatterns(line, [".XXX.X.", ".XX.XX.", ".X.XXX."]);
+    total.openThree += countPatterns(line, ["..XXX.."]);
+    total.jumpThree += countPatterns(line, ["..XX.X..", "..X.XX.."]);
+    total.sleepThree += countPatterns(line, ["O.XXX..", "..XXX.O", "O.XX.X.", ".X.XX.O"]);
+    total.openTwo += countPatterns(line, ["..XX...", "...XX..", "..X.X.."]);
+  }
+  return total;
+}
+
 function evaluatePlacement(board: Board, position: Position, stone: Stone) {
   const next = placeStone(board, position, stone);
   const shapes = DIRECTIONS.map(([dr, dc]) => lineShape(next, position, stone, dr, dc));
-  const score = shapes.reduce((sum, shape) => sum + shapeScore(shape.length, shape.openEnds), 0);
+  const patterns = patternCounts(next, position, stone);
+  const patternScore = patterns.jumpFour * 85_000 + patterns.openThree * 11_000 + patterns.jumpThree * 7_500 + patterns.sleepThree * 1_400 + patterns.openTwo * 500;
+  const score = shapes.reduce((sum, shape) => sum + shapeScore(shape.length, shape.openEnds), 0) + patternScore;
   const openFours = shapes.filter((shape) => shape.length === 4 && shape.openEnds === 2).length;
   const fours = shapes.filter((shape) => shape.length === 4 && shape.openEnds > 0).length;
+  const closedFours = shapes.filter((shape) => shape.length === 4 && shape.openEnds === 1).length;
   const openThrees = shapes.filter((shape) => shape.length === 3 && shape.openEnds === 2).length;
   const best = shapes.reduce((current, shape) => shapeScore(shape.length, shape.openEnds) > shapeScore(current.length, current.openEnds) ? shape : current);
-  return { score, openFours, fours, openThrees, best };
+  return { score, openFours, fours, closedFours, openThrees, best, patterns };
 }
 
 function isNearby(board: Board, position: Position) {
@@ -56,6 +99,20 @@ function isNearby(board: Board, position: Position) {
 
 function winningMoves(board: Board, stone: Stone) {
   return legalMoves(board).filter((move) => getWinner(placeStone(board, move, stone)) === stone);
+}
+
+function nearbyMoves(board: Board) {
+  return legalMoves(board).filter((move) => isNearby(board, move));
+}
+
+function strongestPlacement(board: Board, stone: Stone) {
+  const moves = nearbyMoves(board);
+  let best: { move: Position; score: number } | null = null;
+  for (const move of moves) {
+    const score = evaluatePlacement(board, move, stone).score;
+    if (!best || score > best.score) best = { move, score };
+  }
+  return best;
 }
 
 export function rankCandidates(board: Board, stone: Stone, limit = 14): Candidate[] {
@@ -75,24 +132,45 @@ export function rankCandidates(board: Board, stone: Stone, limit = 14): Candidat
     ].map((move, index) => ({ ...move, label: toLabel(move), score: 10_000 - index * 100, reason: index === 0 ? "天元开局，最大化四向延展空间" : "中心区开局，保留多方向发展", forced: null }));
   }
   const pool = occupied ? legal.filter((move) => isNearby(board, move)) : legal;
-  return pool.map((move) => {
+  const preliminary = pool.map((move) => {
     const attack = evaluatePlacement(board, move, stone);
     const defense = evaluatePlacement(board, move, opponent);
     const next = placeStone(board, move, stone);
     const nextWins = winningMoves(next, stone).length;
     const opponentWins = winningMoves(next, opponent).length;
     const center = 14 - (Math.abs(move.row - 7) + Math.abs(move.col - 7));
-    const forkBonus = attack.openFours * 180_000 + Math.max(0, attack.openThrees - 1) * 24_000 + Math.max(0, nextWins - 1) * 70_000;
+    const threatCount = attack.openFours + attack.fours + attack.openThrees + attack.patterns.jumpFour + attack.patterns.jumpThree;
+    const forkBonus = attack.openFours * 180_000 + attack.patterns.jumpFour * 100_000 + Math.max(0, threatCount - 1) * 38_000 + Math.max(0, nextWins - 1) * 70_000;
     const safety = opponentWins ? -500_000 * opponentWins : 0;
     const score = attack.score * 1.15 + defense.score + forkBonus + safety + center * 3;
     const tags = [
       attack.openFours ? "制造活四" : "",
+      attack.patterns.jumpFour ? "制造跳四" : "",
+      attack.closedFours ? "制造冲四" : "",
       attack.fours > 1 ? "形成双四" : "",
       attack.openThrees > 1 ? "形成双活三" : "",
+      attack.patterns.jumpThree ? "制造跳活三" : "",
+      attack.patterns.sleepThree ? "构筑眠三" : "",
+      attack.patterns.openTwo ? "扩展活二" : "",
+      (attack.fours + attack.patterns.jumpFour) > 0 && (attack.openThrees + attack.patterns.jumpThree) > 0 ? "形成四三杀" : "",
       defense.score >= 8_000 ? "压制对手强棋形" : "",
       `进攻形${attack.best.length}连/${attack.best.openEnds}口`,
       `防守值${Math.round(defense.score)}`,
     ].filter(Boolean);
     return { ...move, label: toLabel(move), score, reason: tags.join("；"), forced: null };
+  }).sort((a, b) => b.score - a.score).slice(0, Math.max(limit, 18));
+
+  return preliminary.map((candidate) => {
+    const afterMove = placeStone(board, candidate, stone);
+    const opponentReply = strongestPlacement(afterMove, opponent);
+    if (!opponentReply) return candidate;
+    const afterReply = placeStone(afterMove, opponentReply.move, opponent);
+    const ownContinuation = strongestPlacement(afterReply, stone);
+    const searchAdjustment = (ownContinuation?.score ?? 0) * 0.22 - opponentReply.score * 0.72;
+    return {
+      ...candidate,
+      score: candidate.score + searchAdjustment,
+      reason: `${candidate.reason}；三层搜索 对手最佳${toLabel(opponentReply.move)}`,
+    };
   }).sort((a, b) => b.score - a.score).slice(0, limit);
 }

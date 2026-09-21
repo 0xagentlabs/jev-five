@@ -29,6 +29,25 @@ describe("hybrid tactical engine", () => {
 
   it("returns no more than the requested strategic candidates", () => {
     const board = placeStone(createBoard(), { row: 7, col: 7 }, "black");
-    expect(rankCandidates(board, "white", 12).length).toBeLessThanOrEqual(12);
+    const candidates = rankCandidates(board, "white", 12);
+    expect(candidates.length).toBeLessThanOrEqual(12);
+    expect(candidates[0].reason).toContain("三层搜索");
+  });
+
+  it("recognizes a broken-four threat", () => {
+    let board = createBoard();
+    board = placeStone(board, { row: 7, col: 3 }, "black");
+    board = placeStone(board, { row: 7, col: 4 }, "black");
+    board = placeStone(board, { row: 7, col: 7 }, "black");
+    const candidate = rankCandidates(board, "black", 30).find((move) => move.label === "F8");
+    expect(candidate?.reason).toContain("跳四");
+  });
+
+  it("recognizes a jumping open-three shape", () => {
+    let board = createBoard();
+    board = placeStone(board, { row: 7, col: 3 }, "black");
+    board = placeStone(board, { row: 7, col: 6 }, "black");
+    const candidate = rankCandidates(board, "black", 30).find((move) => move.label === "E8");
+    expect(candidate?.reason).toContain("跳活三");
   });
 });
