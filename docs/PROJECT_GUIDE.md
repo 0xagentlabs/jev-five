@@ -52,7 +52,7 @@ pnpm build
 ## 线上资源
 
 - GitHub：`https://github.com/0xagentlabs/jev-five`
-- Vercel 生产环境：`https://jev-five-0xcevin-5020s-projects.vercel.app`
+- Vercel 生产环境：`https://jev-five-ten.vercel.app`
 - Jev 官方站点：`https://typesafe.ai`
 - TypeSafe Console：`https://console.typesafe.ai/settings/keys`
 

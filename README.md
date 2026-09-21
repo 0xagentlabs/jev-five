@@ -2,7 +2,7 @@
 
 一个使用 TypeSafe AI 官方 Jev System One API 驱动的五子棋演示。支持“人类 vs Jev”和“Jev vs Jev”两种模式，并展示每一步的结构化选择、置信度、候选概率和延迟。
 
-在线体验：[jev-five-0xcevin-5020s-projects.vercel.app](https://jev-five-0xcevin-5020s-projects.vercel.app)
+在线体验：[jev-five-ten.vercel.app](https://jev-five-ten.vercel.app)
 
 ## 本地运行
 
