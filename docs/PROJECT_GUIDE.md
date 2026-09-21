@@ -48,3 +48,12 @@ pnpm build
 ```
 
 常见问题：503 表示未配置密钥；401/403 通常表示密钥无效或无 Jev 权限；502 会在界面显示上游错误并提供重试。Jev 仍可能做出较弱棋步，置信度是决策信号，不是必胜保证。
+
+## 线上资源
+
+- GitHub：`https://github.com/0xagentlabs/jev-five`
+- Vercel 生产环境：`https://jev-five.vercel.app`
+- Jev 官方站点：`https://typesafe.ai`
+- TypeSafe Console：`https://console.typesafe.ai/settings/keys`
+
+Vercel 项目已连接上述 GitHub 仓库的 `main` 分支。当前生产环境刻意不包含密钥，用于验证未配置时的引导弹窗；配置环境变量后需要重新部署。
