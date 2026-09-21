@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, BrainCircuit, ExternalLink, KeyRound, RotateCcw, Sparkles, Swords, UserRound, X } from "lucide-react";
+import { Bot, BrainCircuit, Eye, EyeOff, ExternalLink, KeyRound, RotateCcw, Sparkles, Swords, UserRound, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Board, createBoard, getWinner, isBoardFull, otherStone, placeStone, Position, Stone, toLabel } from "@/lib/game";
 
@@ -18,6 +18,10 @@ export default function Home() {
   const [thinking, setThinking] = useState(false);
   const [autoPlay, setAutoPlay] = useState(false);
   const [configured, setConfigured] = useState<boolean | null>(null);
+  const [jevKey, setJevKey] = useState("");
+  const [keyDraft, setKeyDraft] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [keyError, setKeyError] = useState("");
   const [showKeyPrompt, setShowKeyPrompt] = useState(false);
   const [error, setError] = useState("");
   const [lastMove, setLastMove] = useState<Position | null>(null);
@@ -29,14 +33,43 @@ export default function Home() {
   const gameOver = Boolean(winner || draw);
 
   useEffect(() => {
+    const savedKey = window.sessionStorage.getItem("jev_typesafe_api_key") ?? "";
+    setJevKey(savedKey);
+    setKeyDraft(savedKey);
     fetch("/api/config", { cache: "no-store" })
       .then((response) => response.json())
       .then((data) => {
-        setConfigured(Boolean(data.configured));
-        if (!data.configured) setShowKeyPrompt(true);
+        const isConfigured = Boolean(data.configured || savedKey);
+        setConfigured(isConfigured);
+        if (!isConfigured) setShowKeyPrompt(true);
       })
-      .catch(() => setConfigured(false));
+      .catch(() => setConfigured(Boolean(savedKey)));
   }, []);
+
+  const saveKey = () => {
+    const value = keyDraft.trim();
+    if (!value) {
+      setKeyError("请输入 TypeSafe API Key。");
+      return;
+    }
+    if (value.length > 512) {
+      setKeyError("API Key 长度异常，请检查后重试。");
+      return;
+    }
+    window.sessionStorage.setItem("jev_typesafe_api_key", value);
+    setJevKey(value);
+    setConfigured(true);
+    setKeyError("");
+    setShowKeyPrompt(false);
+  };
+
+  const clearKey = () => {
+    window.sessionStorage.removeItem("jev_typesafe_api_key");
+    setJevKey("");
+    setKeyDraft("");
+    setConfigured(false);
+    setShowKeyPrompt(true);
+  };
 
   const reset = useCallback((nextMode = mode, nextHuman = humanStone) => {
     requestId.current += 1;
@@ -64,7 +97,7 @@ export default function Home() {
     try {
       const response = await fetch("/api/move", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(jevKey ? { "X-TypeSafe-API-Key": jevKey } : {}) },
         body: JSON.stringify({ board: activeBoard, stone, persona: stone === "black" ? "attack" : "defense" }),
       });
       const data = await response.json();
@@ -82,7 +115,7 @@ export default function Home() {
     } finally {
       if (requestId.current === id) setThinking(false);
     }
-  }, [configured, mode]);
+  }, [configured, jevKey, mode]);
 
   useEffect(() => {
     const shouldMove = !gameOver && !thinking && ((mode === "human" && turn !== humanStone) || (mode === "duel" && autoPlay));
@@ -107,7 +140,7 @@ export default function Home() {
     <main>
       <header className="topbar">
         <a className="brand" href="#game" aria-label="Jev Five 首页"><span className="brand-mark"><BrainCircuit size={20} /></span><span>Jev Five</span><small>System One Arena</small></a>
-        <div className={`api-pill ${configured ? "ready" : "missing"}`}><span />{configured === null ? "检测配置" : configured ? "Jev 已连接" : "需要 API Key"}</div>
+        <button className={`api-pill ${configured ? "ready" : "missing"}`} onClick={() => setShowKeyPrompt(true)}><span />{configured === null ? "检测配置" : configured ? "Jev 已连接" : "配置 API Key"}</button>
       </header>
 
       <section className="hero">
@@ -163,7 +196,7 @@ export default function Home() {
 
       <footer><span>Built with the official TypeSafe SDK</span><a href="https://typesafe.ai" target="_blank" rel="noreferrer">了解 Jev <ExternalLink size={14} /></a></footer>
 
-      {showKeyPrompt && <div className="modal-backdrop" role="presentation"><section className="modal" role="dialog" aria-modal="true" aria-labelledby="key-title"><button className="modal-close" onClick={() => setShowKeyPrompt(false)} aria-label="关闭提示"><X size={19} /></button><span className="modal-icon"><KeyRound /></span><small>CONFIGURATION REQUIRED</small><h2 id="key-title">还差一把 Jev API Key</h2><p>此部署尚未配置 TypeSafe 官方密钥。界面可以浏览，但启动 Jev 对局前需要在 Vercel 项目环境变量中添加：</p><code>TYPESAFE_API_KEY</code><ol><li>前往 TypeSafe Console 创建官方密钥</li><li>在 Vercel Settings → Environment Variables 中添加</li><li>重新部署后即可开始对局</li></ol><a className="modal-cta" href="https://console.typesafe.ai/settings/keys" target="_blank" rel="noreferrer">获取官方 API Key <ExternalLink size={16} /></a><button className="text-button" onClick={() => setShowKeyPrompt(false)}>先看看棋盘</button></section></div>}
+      {showKeyPrompt && <div className="modal-backdrop" role="presentation"><section className="modal" role="dialog" aria-modal="true" aria-labelledby="key-title"><button className="modal-close" onClick={() => setShowKeyPrompt(false)} aria-label="关闭提示"><X size={19} /></button><span className="modal-icon"><KeyRound /></span><small>BRING YOUR OWN KEY</small><h2 id="key-title">配置 Jev API Key</h2><p>填入 TypeSafe 官方密钥即可开始对局。密钥仅保存在当前浏览器会话中，关闭标签页后自动清除。</p><div className="key-field"><label htmlFor="jev-api-key">TypeSafe API Key</label><div><input id="jev-api-key" type={showKey ? "text" : "password"} value={keyDraft} onChange={(event) => { setKeyDraft(event.target.value); setKeyError(""); }} onKeyDown={(event) => { if (event.key === "Enter") saveKey(); }} placeholder="粘贴你的 API Key" autoComplete="off" spellCheck={false} aria-describedby="key-help key-error" autoFocus /><button type="button" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? "隐藏 API Key" : "显示 API Key"}>{showKey ? <EyeOff size={18} /> : <Eye size={18} />}</button></div><small id="key-help">通过 HTTPS 发送给本站服务端代理，不会写入数据库或构建产物。</small>{keyError && <strong id="key-error" role="alert">{keyError}</strong>}</div><button className="modal-cta key-submit" onClick={saveKey}>保存并开始</button>{jevKey && <button className="text-button danger-text" onClick={clearKey}>清除当前会话密钥</button>}<a className="text-link" href="https://console.typesafe.ai/settings/keys" target="_blank" rel="noreferrer">获取官方 API Key <ExternalLink size={14} /></a><button className="text-button" onClick={() => setShowKeyPrompt(false)}>先看看棋盘</button></section></div>}
     </main>
   );
 }

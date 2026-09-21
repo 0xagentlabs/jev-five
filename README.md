@@ -15,7 +15,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-官方密钥在 [TypeSafe Console](https://console.typesafe.ai/settings/keys) 创建。未配置时，应用会显示配置提示，密钥只由服务端 API Route 读取。
+官方密钥在 [TypeSafe Console](https://console.typesafe.ai/settings/keys) 创建。未配置时，应用会显示输入框。用户密钥仅保存在浏览器 `sessionStorage`，关闭标签页后清除；请求通过 HTTPS 发送给服务端 API Route，不会进入仓库或构建产物。也可继续使用服务端 `TYPESAFE_API_KEY`。
 
 ## 验证
 

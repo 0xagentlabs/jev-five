@@ -11,8 +11,13 @@ function validBoard(value: unknown): value is Board {
 }
 
 export async function POST(request: NextRequest) {
-  if (!process.env.TYPESAFE_API_KEY) {
+  const browserKey = request.headers.get("x-typesafe-api-key")?.trim();
+  const apiKey = browserKey || process.env.TYPESAFE_API_KEY;
+  if (!apiKey) {
     return NextResponse.json({ code: "JEV_NOT_CONFIGURED", message: "尚未配置官方 TypeSafe API Key。" }, { status: 503 });
+  }
+  if (apiKey.length > 512 || /[\r\n]/.test(apiKey)) {
+    return NextResponse.json({ message: "API Key 格式无效。" }, { status: 400 });
   }
 
   let body: MoveRequest;
@@ -36,7 +41,7 @@ export async function POST(request: NextRequest) {
   const startedAt = Date.now();
 
   try {
-    const client = new TypeSafeClient({ apiKey: process.env.TYPESAFE_API_KEY });
+    const client = new TypeSafeClient({ apiKey });
     const response = await client.systemOne({
       model: "jev-latest",
       state: {
